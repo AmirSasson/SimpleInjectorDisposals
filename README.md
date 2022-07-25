@@ -6,6 +6,8 @@ show case of:
 - creating Task scope in TasksEngine.
 - properly async dispose dependencies
 
+## this example uses Simple injector, yet the application is not biased to Simple injector, and every IOC provider can bring its own driver (Autofac, ninject, native..)
+
 ```mermaid
 sequenceDiagram
     Program->>+SingletoneEngine: run Tasks engine
