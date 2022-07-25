@@ -3,20 +3,16 @@ using SimpleInjector.Lifestyles;
 
 await using var container = new Container();
 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-container.Register<ScopedNotThreadSafeService>(Lifestyle.Scoped);
+container.Register<ScopedServiceNotThreadSafe>(Lifestyle.Scoped);
 container.RegisterSingleton<SingletoneProcessingEngine>();
 container.RegisterSingleton<IScopeProvider, SimpleInjectorScopeProvider>();
 
-for (int i = 0; i < 2; i++)
-{
-    await container.GetInstance<SingletoneProcessingEngine>().LongTask();
-    await Task.Delay(50);
-}
+await container.GetInstance<SingletoneProcessingEngine>().RunEngine();
 
-class ScopedNotThreadSafeService : IAsyncDisposable
+class ScopedServiceNotThreadSafe : IAsyncDisposable
 {
     private int? cache = null;
-    public async Task<int> Echo(int i)
+    public async Task<int> RunTask(int i)
     {
         if (cache.HasValue)
         {
@@ -38,20 +34,27 @@ class ScopedNotThreadSafeService : IAsyncDisposable
 class SingletoneProcessingEngine : IAsyncDisposable
 {
     private readonly IScopeProvider sp;
+    private const int NUMBER_OF_TASKS = 5;
 
     public SingletoneProcessingEngine(IScopeProvider sp)
     {
         this.sp = sp;
     }
 
-    async public Task LongTask()
+    async public Task RunEngine()
+    {
+        for (int i = 0; i < NUMBER_OF_TASKS; i++)
+        {
+            await HandleTask(i);
+        }
+    }
+
+    async private Task HandleTask(int task)
     {
         await using var scope = sp.CreateScope();
-        var s = scope.GetService<ScopedNotThreadSafeService>();
-        Console.WriteLine(await s.Echo(DateTime.Now.Second));
-
-        scope.GetService<ScopedNotThreadSafeService>();
-        Console.WriteLine(await s.Echo(DateTime.Now.Second));
+        var scopedSerice = scope.GetService<ScopedServiceNotThreadSafe>();
+        var res = await scopedSerice.RunTask(DateTime.Now.Second);
+        Console.WriteLine(res);
     }
 
     public async ValueTask DisposeAsync()
